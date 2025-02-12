@@ -29,21 +29,21 @@ typedef struct person {
     double balance;
 } person;
 
-typedef struct admin{
+typedef struct administrator{
     char name[MAX_NAME];
     char surname[MAX_NAME];
     char id[MAX_ID];
     char password[MAX_PASSWORD_LENGTH];
     unsigned char salt[SALT_SIZE];
     unsigned char password_hash[HASH_SIZE];
-} admin;
+} administrator;
 
 //necessary functions for hashing by id
 person *user_hash_table[TABLE_SIZE];
 person deleted_user_entry = {.id = ""}; // Marker for deleted entries
 
-admin *admin_hash_table[TABLE_SIZE];
-admin deleted_admin_entry = {.id = ""}; // Marker for deleted entries
+administrator *admin_hash_table[TABLE_SIZE];
+administrator deleted_admin_entry = {.id = ""}; // Marker for deleted entries
 
 unsigned int hash(char *id) {
     unsigned long hash = 5381;
@@ -63,6 +63,8 @@ void init_hash_table() {
 }
 
 //user hash table
+
+//insert user
 bool user_hash_table_insert(person *p) {
     if (p == NULL) return false;
     
@@ -77,7 +79,7 @@ bool user_hash_table_insert(person *p) {
     }
     return false; // Table full
 }
-
+//lookup user
 person *user_hash_table_lookup(char *id) {
     int index = hash(id);
     for (int i = 0; i < TABLE_SIZE; i++) {
@@ -97,7 +99,7 @@ person *user_hash_table_lookup(char *id) {
     }
     return NULL;
 }
-
+//delete user
 person *user_hash_table_delete(char *id) {
     int index = hash(id);
     for (int i = 0; i < TABLE_SIZE; i++) {
@@ -121,7 +123,9 @@ person *user_hash_table_delete(char *id) {
 }
 
 //admin hash table
-bool admin_hash_table_insert(admin *a) {
+
+//insert admin
+bool admin_hash_table_insert(administrator *a) {
     if (a == NULL) return false;
     
     int index = hash(a->id);
@@ -136,8 +140,8 @@ bool admin_hash_table_insert(admin *a) {
     }
     return false; // Table full
 }
-
-person *admin_hash_table_lookup(char *id) {
+//lookup admin
+administrator *admin_hash_table_lookup(char *id) {
     int index = hash(id);
     for (int i = 0; i < TABLE_SIZE; i++) {
         int current_index = (index + i) % TABLE_SIZE;
@@ -156,8 +160,8 @@ person *admin_hash_table_lookup(char *id) {
     }
     return NULL;
 }
-
-person *admin_hash_table_delete(char *id) {
+//delete admin
+administrator *admin_hash_table_delete(char *id) {
     int index = hash(id);
     for (int i = 0; i < TABLE_SIZE; i++) {
         int current_index = (index + i) % TABLE_SIZE;
@@ -171,14 +175,13 @@ person *admin_hash_table_delete(char *id) {
         }
         
         if (strcmp(admin_hash_table[current_index]->id, id) == 0) {
-            person *deleted = user_hash_table[current_index];
+            administrator *deleted = admin_hash_table[current_index];
             admin_hash_table[current_index] = &deleted_admin_entry;
             return deleted;
         }
     }
     return NULL;
 }
-
     
 //hashing password
 void hash_password(const char *password, unsigned char *salt, unsigned char *password_hash) {
@@ -237,7 +240,7 @@ int user_write_file(){
 
     hash_password(new_user->password, new_user->salt, new_user->password_hash);
 
-    if(hash_table_insert(new_user)){
+    if(user_hash_table_insert(new_user)){
         printf("User successfuly entered in hash table...\n");
     }
     else{
@@ -275,7 +278,7 @@ int admin_write_file(){
         return 1;
     }
 
-    admin *new_admin = malloc(sizeof(admin));
+    administrator *new_admin = malloc(sizeof(administrator));
     if(new_admin == NULL){
         perror("Error while allocationg memory to user");
         fclose(file);
@@ -298,7 +301,7 @@ int admin_write_file(){
     }
     else{
         printf("Error while putting user in hash table\n");
-        free(new_user);
+        free(new_admin);
         fclose(file);
         return 1;
     }
@@ -317,7 +320,7 @@ int admin_write_file(){
         fprintf(file, "%02x", new_admin->password_hash[i]);
     }
 
-    fprintf(file, ",%.2lf\n", new_admin->balance);
+    fprintf(file, "\n");
     
     fclose(file);
     return 0;
@@ -407,7 +410,7 @@ int admin_read_file(){
 
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file) != NULL) {
-        admin *admin = malloc(sizeof(person));
+        administrator *admin = malloc(sizeof(administrator));
         if (admin == NULL) {
             perror("Error during memory allocation!");
             fclose(file);
@@ -457,35 +460,12 @@ int admin_read_file(){
         if (!admin_hash_table_insert(admin)) {
             printf("Error while putting user in admin hash table\n");
             free(admin);
-            fclose(admin);
+            fclose(file);
             return 1;
         }
     }
     fclose(file);
     return 0;
-}
-
-//welcome menu
-int welcome_menu(){
-    printf("Welcome to the banking system\n");
-    printf("Choose below:/n/n");
-    printf("1. Login as user\n");
-    printf("2. Login as administrator\n")
-    pritnf("3. Exit");
-}
-//user menu
-void user_menu(){
-    printf("Check Account Balance\n");
-    printf("Check personal info");
-    printf("Set Transaction\n");
-    printf("Exit\n");
-}
-//admin menu
-void admin_menu(){
-    printf("Insert a user");
-    printf("Delete a user");
-    printf("Lookup a user");
-    printf("Exit");
 }
 
 //logging users
@@ -495,32 +475,44 @@ bool login_user(char *id, char *password){
 
     while (attempts < MAX_LOGIN_ATTEMPTS)
     {
-        printf("---Login---\n");
+        printf(" ----------------------------------------\n");
+        printf("|                  Login                 |\n");
+        printf(" ----------------------------------------\n\n");
 
-        printf("Enter ID: ");
+        printf("Enter ID: "); 
         scanf("%s", id);
-
+        printf("----------------------------------------\n");
         printf("Enter password: ");
         scanf("%s", password);
+        printf("----------------------------------------\n\n");    
 
         person *user = user_hash_table_lookup(id);
 
         if(user == NULL){
-            printf("The user ID '%s' does not exist! (you have %d attempts left)\n", id, MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" --------------------------------------------------------\n");
+            printf("| This user ID does not exist! (you have %d attempts left)|\n", MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" --------------------------------------------------------\n");
             attempts++;
             continue;
         }
 
         if(verify_hashed_password(password, user->salt, user->password_hash)){
-            printf("Welcome back %s!\n", user->name);
+            printf(" -------------------------------------\n");
+            printf("| Welcome back %-20s:) |\n", user->name);
+            printf(" -------------------------------------\n");
             return true;
         }
         else{
-            printf("Password is incorrect (you have %d attempts left)", MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" --------------------------------------------------\n");
+            printf("| Password is incorrect (you have %d attempts left) |\n", MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" --------------------------------------------------\n");
+
             attempts++;
         }
     }
-    printf("You reached the maximum attempts, please try again later!\n");
+    printf(" -----------------------------------------------------------\n");
+    printf("| You reached the maximum attempts, please try again later! |\n");
+    printf(" -----------------------------------------------------------\n");
     return false;
 }
 //logging admins
@@ -530,41 +522,88 @@ bool login_admin(char *id, char *password){
 
     while (attempts < MAX_LOGIN_ATTEMPTS)
     {
-        printf("---Login---\n");
+        printf(" ----------------------------------------\n");
+        printf("|                  Login                 |\n");
+        printf(" ----------------------------------------\n\n");
 
-        printf("Enter ID: ");
+        printf("Enter ID: "); 
         scanf("%s", id);
-
+        printf("----------------------------------------\n");
         printf("Enter password: ");
         scanf("%s", password);
-
-        admin *admin = admin_hash_table_lookup(id);
+        printf("----------------------------------------\n");
+        
+        administrator *admin = admin_hash_table_lookup(id);
 
         if(admin == NULL){
-            printf("The admin ID '%s' does not exist! (you have %d attempts left)\n", id, MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" ---------------------------------------------------------\n");
+            printf("| This admin ID does not exist! (you have %d attempts left)|\n", MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" ---------------------------------------------------------\n");
+
             attempts++;
             continue;
         }
 
         if(verify_hashed_password(password, admin->salt, admin->password_hash)){
-            printf("Welcome back %s!\n", admin->name);
+            printf(" -------------------------------------\n");
+            printf("| Welcome back %-20s:) |\n", admin->name);
+            printf(" -------------------------------------\n");
+
             return true;
         }
         else{
-            printf("Password is incorrect (you have %d attempts left)", MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" --------------------------------------------------\n");
+            printf("| Password is incorrect (you have %d attempts left) |", MAX_LOGIN_ATTEMPTS-(attempts+1));
+            printf(" --------------------------------------------------\n");
+
             attempts++;
         }
     }
-    printf("You reached the maximum attempts, please try again later!\n");
+    printf(" -----------------------------------------------------------\n");
+    printf("| You reached the maximum attempts, please try again later! |\n");
+    printf(" -----------------------------------------------------------\n");
     return false;
 }
 
+//welcome menu
+void welcome_menu(){
+    printf("WELCOME\n\n");
+    printf("------------------------------------------\n");
+    printf("|              Banking System            |\n");
+    printf("|----------------------------------------|\n");
+    printf("| 1. Login as user                       |\n");
+    printf("| 2. Login as administrator              |\n");
+    printf("| 3. Exit                                |\n");
+    printf("------------------------------------------\n\n");
 
+}
+//user menu
+void user_menu(){
+    printf("------------------------------------------\n");
+    printf("|              Banking System            |\n");
+    printf("|----------------------------------------|\n");
+    printf("| 1. Check Account Balance               |\n");
+    printf("| 2. Check Personal Info                 |\n");
+    printf("| 3. Set Transaction                     |\n");
+    printf("| 4. Exit                                |\n");
+    printf("------------------------------------------\n");
+}
+//admin menu
+void admin_menu(){
+    printf("------------------------------------------\n");
+    printf("|              Banking System            |\n");
+    printf("|----------------------------------------|\n");
+    printf("| 1. Insert a User                       |\n");
+    printf("| 2. Delete a User                       |\n");
+    printf("| 3. Lookup a User                       |\n");
+    printf("| 4. Exit                                |\n");
+    printf("------------------------------------------\n");
+}
 
 void clean_hash(){
         for (int i = 0; i < TABLE_SIZE; i++) {
         person *p = user_hash_table[i];
-        admin *a = admin_hash_table[i];
+        administrator *a = admin_hash_table[i];
         if (p != NULL && p != &deleted_user_entry) {
             free(p);
             user_hash_table[i] = NULL;
@@ -581,49 +620,82 @@ int main() {
     atexit(clean_hash);
     char id[MAX_ID];
     char password[MAX_PASSWORD_LENGTH];
+    int welcome_choice = 0;
     int choice = 0;
 
     welcome_menu();
-    while (1)
+    printf("Enter your choice: ");
+    scanf("%d", &welcome_choice);
+    printf("\n\n");
+
+    switch (welcome_choice)
     {
-        printf("Enter your choice: ");
-        scanf("%d", &choice);
-        switch (choice)
-        {
-            case 1:
-                if (user_read_file() != 0){
-                    perror("Error reading files!\n");
-                    return 1;
-                }
-
-                if (login_user(id, password) == false)
-                {
-                    return 1;
-                }
+        case 1:
+            if (user_read_file() != 0){
+                perror("Error reading files!\n");
+                return 1;
+            }
+            if (login_user(id, password) == false)
+            {
+                return 1;
+            }
                 
-                user_menu();
+            user_menu();
 
-                break;
-            case 2:
-                if (user_read_file() != 0 || admin_read_file() != 0){
-                    perror("Error reading files!\n");
-                    return 1;
-                }
+            printf("Enter your choice: ");
+            scanf("%d", &choice);
+            printf("\n\n");
 
-                if (login_admin(id, password) == false)
-                {
-                    return 1;
-                }
+            switch(choice)
+            {
+                case 1:
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                case 4:
+                    return 0;
+                default:
+                    printf("Out of range\n");
+                    break;
+            }
+            break;
+        case 2:
+            if (user_read_file() != 0 || admin_read_file() != 0){
+                perror("Error reading files!\n");
+                return 1;
+            }
 
-                admin_menu();
+            if (login_admin(id, password) == false)
+            {
+                return 1;
+            }
 
-                break;
-            case 3: 
-                printf("Exiting... \n");
-                return 0;
-            default: printf("Your choice is out of the range\n");
-        }
+            admin_menu();
+
+            printf("Enter your choice: ");
+            scanf("%d", &choice);
+
+            switch (choice)
+            {
+                case 1:
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                case 4:
+                    return 0;
+                default:
+                    printf("Out of range\n");
+                    break;
+            }
+            break;
+        case 3: 
+            printf("Exiting... \n");
+            return 0;
+        default: printf("Your choice is out of the range\n");
     }
-
     return 0;
 }
