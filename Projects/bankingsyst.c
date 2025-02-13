@@ -10,8 +10,8 @@
 #define TABLE_SIZE 20
 #define MAX_ID 100
 #define MAX_PASSWORD_LENGTH 25
-#define USER_FILE_NAME "bankuser.csv"
-#define ADMIN_FILE_NAME "bankadmin.csv"
+#define USER_FILE_NAME "user-admin/bankuser.csv"
+#define ADMIN_FILE_NAME "user-admin/bankadmin.csv"
 #define MAX_LINE_LENGTH 256
 #define MAX_LOGIN_ATTEMPTS 10
 
@@ -221,7 +221,7 @@ int user_write_file(){
 
     person *new_user = malloc(sizeof(person));
     if(new_user == NULL){
-        perror("ERROR while allocationg memory to user");
+        perror("ERROR while allocationg memory to user.");
         fclose(file);
         return 1;
     }
@@ -349,6 +349,21 @@ int user_write_file(){
     fprintf(file, ",%.2lf\n", new_user->balance);
     
     fclose(file);
+
+
+    char filename[MAX_ID + 5];
+    snprintf(filename, sizeof(filename), "transactions/%s.csv", new_user->id);
+
+    FILE *file_transaction = fopen(filename, "a");
+    if (file_transaction == NULL) {
+        perror("Error opening file.");
+        return 1;
+    }
+
+    fprintf(file_transaction, "$%.2lf was initilised to your account (Current balance: %.2lf).\n", new_user->balance, new_user->balance);
+
+    fclose(file_transaction);
+
     return 0;
 }
 //writing on admin file
@@ -629,15 +644,34 @@ void user_update_file(){
 
             fprintf(file, "%s,%s,%s,", user->name, user->surname, user->id);
 
-            for (int j = 0; j < SALT_SIZE; j++)
-                fprintf(file, "%02x", user->salt[j]);
+            for (int j = 0; j < SALT_SIZE; j++) fprintf(file, "%02x", user->salt[j]);
 
             fprintf(file, ",");
 
-            for (int j = 0; j < HASH_SIZE; j++)
-                fprintf(file, "%02x", user->password_hash[j]);
+            for (int j = 0; j < HASH_SIZE; j++) fprintf(file, "%02x", user->password_hash[j]);
 
             fprintf(file, ",%.2lf\n", user->balance);
+        }
+    }
+    fclose(file);
+}
+//updating admin file
+void admin_update_file(){
+    FILE *file = fopen(ADMIN_FILE_NAME, "w");
+
+    for (int i = 0; i < TABLE_SIZE; i++)
+    {
+        if (admin_hash_table[i] != NULL && admin_hash_table[i] != &deleted_admin_entry) {
+            administrator *admin = admin_hash_table[i];
+
+            fprintf(file, "%s,%s,%s,", admin->name, admin->surname, admin->id);
+
+            for (int j = 0; j < SALT_SIZE; j++) fprintf(file, "%02x", admin->salt[j]);
+
+            fprintf(file, ",");
+
+            for (int j = 0; j < HASH_SIZE; j++) fprintf(file, "%02x", admin->password_hash[j]);
+
         }
     }
     fclose(file);
@@ -750,7 +784,7 @@ void check_user_balance(person *current_user){
 //checking user personal info
 void user_personal_info(person *current_user, const char *password){
     printf(" --------------------------------------------------------------------------------------------------------------\n");
-    printf("|                                          Your Personal Information                                           |\n");
+    printf("|                                           User Personal Information                                          |\n");
     printf("|==============================================================================================================|\n");
     printf("|         Name         |       Surname        |          ID          |       Password       | Current Balance  |\n");
     printf("|----------------------|----------------------|----------------------|----------------------|------------------|\n");
@@ -758,15 +792,14 @@ void user_personal_info(person *current_user, const char *password){
     printf("|______________________________________________________________________________________________________________|\n\n");
 }
 //performing transactions between users
-void setting_transacrion(person *current_user){
+void setting_transactions(person *current_user){
 
     char receiver_id[MAX_ID];
     double amount;
-    char choice;
 
     printf("Select ID of the user you wish to send a transaction to: ");
     scanf("%99s", receiver_id);
-    printf("\n");
+    
     if(strcmp(receiver_id, current_user->id) == 0){
         printf(" ---------------------------------------\n");
         printf("| ERROR: You cannot choose your own ID! |\n");
@@ -792,7 +825,7 @@ void setting_transacrion(person *current_user){
         return;
     }
 
-    printf("------------------------------------------------------------\n\n");
+    printf("------------------------------------------------------------\n");
 
     person *receiver_user = user_hash_table_lookup(receiver_id);
 
@@ -801,6 +834,7 @@ void setting_transacrion(person *current_user){
         printf(" ------------------------------------\n");
         printf("| ERROR: Amount can only be numeric! |\n");
         printf("|____________________________________|\n\n");
+        return;
     }
     else if(amount > current_user->balance){
         printf(" ---------------------------------------------------------------\n");
@@ -815,15 +849,20 @@ void setting_transacrion(person *current_user){
         return;
     }
 
-    printf("------------------------------------------------------------\n\n");
+    printf("------------------------------------------------------------\n");
 
     while(1){
         printf("Are you sure you wish to send $%.2lf to user '%s'? (y/n): ", amount, receiver_id);
-        scanf(" %c", &choice);
-        printf("\n");
 
-        if (choice == 'n' || choice == 'N'){
-            printf(" ------------\n");
+        char choice;
+        
+        if (scanf(" %c", &choice) != 1){
+            printf("\n ----------------------------------------------\n");
+            printf("| ERROR: Choice can only be of character type! |\n");
+            printf("|______________________________________________|\n\n");
+        }
+        else if (choice == 'n' || choice == 'N'){
+            printf("\n ------------\n");
             printf("| Exiting... |\n");
             printf("|____________|\n\n");
             return;
@@ -831,18 +870,58 @@ void setting_transacrion(person *current_user){
         else if (choice == 'y' || choice == 'Y'){
             break;
         }
-        printf(" -------------------------------\n");
-        printf("| Choice can only be 'y' or 'n' |\n");
-        printf("|_______________________________|\n");
+        printf("\n --------------------------------------\n");
+        printf("| ERROR: Choice can only be 'y' or 'n' |\n");
+        printf("|______________________________________|\n\n");
     }
     current_user->balance -= amount;
     receiver_user->balance += amount;
     user_update_file();
+
+    char filename_from[MAX_ID + 5];
+    char filename_to[MAX_ID + 5];
+    snprintf(filename_from, sizeof(filename_from), "transactions/%s.csv", current_user->id);
+    snprintf(filename_to, sizeof(filename_to), "transactions/%s.csv", receiver_id);
+
+    FILE *file_from = fopen(filename_from, "a");
+    FILE *file_to = fopen(filename_to, "a");
+    if (file_from == NULL || file_to == NULL) {
+        perror("Error opening file.");
+        return;
+    }
+
+    fprintf(file_from, "You passed a transaction of $%.2lf to user '%s' (Current balance: %.2lf).\n", amount, receiver_id, current_user->balance);
+    fprintf(file_to, "You received a transaction of $%.2lf from user '%s' (Current balance: %.2lf).\n", amount, current_user->id, receiver_user->balance);
+
+    fclose(file_from);
+    fclose(file_to);
+}
+//reading transaction history
+void read_transaction_file(char *id) {
+    char filename[MAX_ID + 5];
+    snprintf(filename, sizeof(filename), "transactions/%s.csv", id);
+    FILE *file = fopen(filename, "r");
+    
+    if (file == NULL) {
+        perror("Error opening file.");
+        return;
+    }
+
+    char line[256];
+    int count = 1;
+    printf("Transaction History for User '%s':\n", id);
+    printf("-----------------------------------------------------------------------------------------------------\n");
+
+    while (fgets(line, sizeof(line), file) != NULL) {
+        printf("| %d. %s", count, line);
+        count++;
+    }
+    printf("|____________________________________________________________________________________________________\n\n");
+    fclose(file);
 }
 //deleting users
 void delete_user(){
     char delete_user_id[MAX_ID];
-    char choice;
 
     printf("Enter ID of user you wish to remove: ");
     scanf("%s", delete_user_id);
@@ -872,11 +951,15 @@ void delete_user(){
 
     while(1){
         printf("Are you sure you wish to delete this user? (y/n): ");
-        scanf(" %c", &choice);
-        printf("\n");
-
-        if (choice == 'n' || choice == 'N'){
-            printf(" ------------\n");
+        
+        char choice;
+        if (scanf(" %c", &choice) != 1){
+            printf("\n ----------------------------------------------\n");
+            printf("| ERROR: Choice can only be of character type! |\n");
+            printf("|______________________________________________|\n\n");
+        }
+        else if (choice == 'n' || choice == 'N'){
+            printf("\n ------------\n");
             printf("| Exiting... |\n");
             printf("|____________|\n\n");
             return;
@@ -884,15 +967,23 @@ void delete_user(){
         else if (choice == 'y' || choice == 'Y'){
             break;
         }
-        printf(" -------------------------------\n");
+        printf("\n -------------------------------\n");
         printf("| Choice can only be 'y' or 'n' |\n");
         printf("|_______________________________|\n\n");
     }
     user_hash_table_delete(delete_user_id);
     user_update_file();
+
+    char transaction_file[MAX_ID + 5];
+    snprintf(transaction_file, sizeof(transaction_file), "transactions/%s.csv", delete_user_id);
+
+    if (remove(transaction_file) != 0) {
+        perror("Error deleting file");
+        return;
+    }
 }
 //lookup user
-void lookup_user(){
+void lookup_users(){
     char lookup_id[MAX_ID];
 
     printf("Enter ID of user you wish to lookup: ");
@@ -922,12 +1013,14 @@ void lookup_user(){
     person *lookup_user = user_hash_table_lookup(lookup_id);
     char password_empty[] = "NON VISIBLE";
     user_personal_info(lookup_user, password_empty);
+    printf("\n");
+    read_transaction_file(lookup_id);
 }
 //list users
 void list_users(){
     char password[] = "NOT VISIBLE";
     printf(" --------------------------------------------------------------------------------------------------------------\n");
-    printf("|                                          Your Personal Information                                           |\n");
+    printf("|                                           User Personal Information                                          |\n");
     printf("|==============================================================================================================|\n");
     printf("|         Name         |       Surname        |          ID          |       Password       | Current Balance  |\n");
     printf("|----------------------|----------------------|----------------------|----------------------|------------------|\n");
@@ -941,10 +1034,125 @@ void list_users(){
     }
     printf("|______________________________________________________________________________________________________________|\n\n");
 }
+//cheking personl info of admin
+void admin_personal_info(administrator *currents_admin, const char *password){
+    printf(" -------------------------------------------------------------------------------------------\n");
+    printf("|                                 Admin Personal Information                                |\n");
+    printf("|===========================================================================================|\n");
+    printf("|         Name         |       Surname        |          ID          |       Password       |\n");
+    printf("|----------------------|----------------------|----------------------|----------------------|\n");
+    printf("| %-20s | %-20s | %-20s | %-20s |\n", currents_admin->name, currents_admin->surname, currents_admin->id, password);
+    printf("|___________________________________________________________________________________________|\n\n");
+}
+//delete admins
+void delete_admin(){
+    char delete_admin_id[MAX_ID];
+    char choice;
+
+    printf("Enter ID of admin you wish to remove: ");
+    scanf("%s", delete_admin_id);
+
+    if(strlen(delete_admin_id) == 0){
+        printf(" ----------------------------\n");
+        printf("| ERROR: ID cannot be empty! |\n");
+        printf("|____________________________|\n\n");
+        return;
+    }
+    else if(strlen(delete_admin_id) >= MAX_ID){
+        printf(" ----------------------------------------\n");
+        printf("| ERROR: ID cannot exceed %d characters! |\n", MAX_ID-1);
+        printf("|________________________________________|\n\n");
+        return;
+    }
+    else if(admin_hash_table_lookup(delete_admin_id) == NULL){
+        printf(" ---------------------------------------\n");
+        printf("| ERROR: This admin ID does not exists! |\n");
+        printf("|_______________________________________|\n\n");
+        return;
+    }
+
+    administrator *admin_to_delete = admin_hash_table_lookup(delete_admin_id);
+    char password_empty[] = "NON VISIBLE";
+    admin_personal_info(admin_to_delete, password_empty);
+
+    while(1){
+        printf("Are you sure you wish to delete this admin? (y/n): ");
+
+        if (scanf(" %c", &choice) != 1){
+            printf("\n ----------------------------------------------\n");
+            printf("| ERROR: Choice can only be of character type! |\n");
+            printf("|______________________________________________|\n\n");
+        }
+        else if (choice == 'n' || choice == 'N'){
+            printf("\n ------------\n");
+            printf("| Exiting... |\n");
+            printf("|____________|\n\n");
+            return;
+        }
+        else if (choice == 'y' || choice == 'Y'){
+            break;
+        }
+        printf("\n -------------------------------\n");
+        printf("| Choice can only be 'y' or 'n' |\n");
+        printf("|_______________________________|\n\n");
+    }
+    admin_hash_table_delete(delete_admin_id);
+    admin_update_file();
+}
+//lookup admin
+void lookup_admins(){
+    char lookup_id[MAX_ID];
+
+    printf("Enter ID of user you wish to lookup: ");
+    scanf("%s", lookup_id);
+
+    printf("\n");
+
+    if(strlen(lookup_id) == 0){
+        printf(" ----------------------------\n");
+        printf("| ERROR: ID cannot be empty! |\n");
+        printf("|____________________________|\n\n");
+        return;
+    }
+    else if(strlen(lookup_id) >= MAX_ID){
+        printf(" ----------------------------------------\n");
+        printf("| ERROR: ID cannot exceed %d characters! |\n", MAX_ID-1);
+        printf("|________________________________________|\n\n");
+        return;
+    }
+    else if(admin_hash_table_lookup(lookup_id) == NULL){
+        printf(" ---------------------------------------\n");
+        printf("| ERROR: This admin ID does not exists! |\n");
+        printf("|_______________________________________|\n\n");
+        return;
+    }
+
+    administrator *lookup_admin = admin_hash_table_lookup(lookup_id);
+    char password_empty[] = "NON VISIBLE";
+    admin_personal_info(lookup_admin, password_empty);
+}
+//list admins
+void list_admins(){
+    char password[] = "NOT VISIBLE";
+    printf(" -------------------------------------------------------------------------------------------\n");
+    printf("|                                 Admin Personal Information                                |\n");
+    printf("|===========================================================================================|\n");
+    printf("|         Name         |       Surname        |          ID          |       Password       |\n");
+    printf("|----------------------|----------------------|----------------------|----------------------|\n");
+
+    for (int i = 0; i < TABLE_SIZE; i++)
+    {
+        if (admin_hash_table[i] != NULL && admin_hash_table[i] != &deleted_admin_entry) {
+            administrator *admin = admin_hash_table[i];
+            printf("| %-20s | %-20s | %-20s | %-20s |\n", admin->name, admin->surname, admin->id, password);
+        }
+    }
+    printf("|___________________________________________________________________________________________|\n\n");
+}
 
 //welcome menu
 void welcome_menu(){
-    printf(" WELCOME\n");
+    printf(" WELCOME (CTRL + C to force exit the program at any time)\n");
     printf(" ----------------------------------------\n");
     printf("|              Banking System            |\n");
     printf("|----------------------------------------|\n");
@@ -962,7 +1170,8 @@ void user_menu(){
     printf("| 1. Check Account Balance               |\n");
     printf("| 2. Check Personal Info                 |\n");
     printf("| 3. Set Transaction                     |\n");
-    printf("| 4. Exit                                |\n");
+    printf("| 4. See Transaction History             |\n");
+    printf("| 5. Exit                                |\n");
     printf("|________________________________________|\n\n");
 }
 //admin menu
@@ -981,6 +1190,7 @@ void admin_menu(){
     printf("| 9. Exit                                |\n");
     printf("|________________________________________|\n\n");
 }
+
 //cleaning admin and user hash
 void clean_hash(){
         for (int i = 0; i < TABLE_SIZE; i++) {
@@ -1026,7 +1236,7 @@ int main() {
             {
                 user_menu();
 
-                printf("Enter your choice: ");
+                printf("\nEnter your choice: ");
                 scanf("%d", &choice);
                 printf("\n\n");
 
@@ -1039,9 +1249,12 @@ int main() {
                         user_personal_info(current_user, password);
                         break;
                     case 3:
-                        setting_transacrion(current_user);
+                        setting_transactions(current_user);
                         break;
                     case 4:
+                        read_transaction_file(current_user->id);
+                        break;
+                    case 5:
                         printf(" --------------------------------\n");
                         printf("| Goodbye %-20s :)|\n", current_user->name);
                         printf("|________________________________|\n");
@@ -1085,18 +1298,22 @@ int main() {
                         delete_user();
                         break;
                     case 3:
-                        lookup_user();
+                        lookup_users();
                         break;
                     case 4:
                         list_users();
                         break;
                     case 5:
+                        admin_write_file();
                         break;
                     case 6:
+                        delete_admin();
                         break;
                     case 7:
+                        lookup_admins();
                         break;
                     case 8:
+                        list_admins();
                         break;
                     case 9:
                         printf(" --------------------------------\n");
