@@ -1,41 +1,4 @@
-//gcc -o bank bankingsyst.c -I$(brew --prefix openssl)/include -L$(brew --prefix openssl)/lib -lssl -lcrypto
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <openssl/sha.h>
-#include <openssl/rand.h>
-
-#define MAX_NAME 256
-#define TABLE_SIZE 20
-#define MAX_ID 100
-#define MAX_PASSWORD_LENGTH 25
-#define USER_FILE_NAME "user-admin/bankuser.csv"
-#define ADMIN_FILE_NAME "user-admin/bankadmin.csv"
-#define MAX_LINE_LENGTH 256
-#define MAX_LOGIN_ATTEMPTS 10
-
-#define SALT_SIZE 16
-#define HASH_SIZE 32
-
-typedef struct person {
-    char name[MAX_NAME];
-    char surname[MAX_NAME];
-    char id[MAX_ID];
-    char password[MAX_PASSWORD_LENGTH];
-    unsigned char salt[SALT_SIZE];
-    unsigned char password_hash[HASH_SIZE];
-    double balance;
-} person;
-
-typedef struct administrator{
-    char name[MAX_NAME];
-    char surname[MAX_NAME];
-    char id[MAX_ID];
-    char password[MAX_PASSWORD_LENGTH];
-    unsigned char salt[SALT_SIZE];
-    unsigned char password_hash[HASH_SIZE];
-} administrator;
+#include "bankingsyst_head.h"
 
 //necessary functions for hashing by id
 person *user_hash_table[TABLE_SIZE];
@@ -231,7 +194,7 @@ int user_write_file(){
     if(strlen(new_user->name) == 0){
         printf(" ------------------------------\n");
         printf("| ERROR: Name cannot be empty! |\n");
-        printf("|______________________________|\n");
+        printf("|______________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -239,7 +202,7 @@ int user_write_file(){
     else if(strlen(new_user->name) >= MAX_NAME){
         printf(" -------------------------------------------\n");
         printf("| ERROR: Name cannot exceed %d characters! |\n", MAX_NAME-1);
-        printf("|___________________________________________|\n");
+        printf("|___________________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -252,7 +215,7 @@ int user_write_file(){
     if(strlen(new_user->surname) == 0){
         printf(" ---------------------------------\n");
         printf("| ERROR: Surname cannot be empty! |\n");
-        printf("|_________________________________|\n");
+        printf("|_________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -260,7 +223,7 @@ int user_write_file(){
     else if(strlen(new_user->surname) >= MAX_NAME){
         printf(" ----------------------------------------------\n");
         printf("| ERROR: Surname cannot exceed %d characters! |\n", MAX_NAME-1);
-        printf("|______________________________________________|\n");
+        printf("|______________________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -272,7 +235,7 @@ int user_write_file(){
     if(strlen(new_user->id) == 0){
         printf(" ----------------------------\n");
         printf("| ERROR: ID cannot be empty! |\n");
-        printf("|____________________________|\n");
+        printf("|____________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -280,7 +243,7 @@ int user_write_file(){
     else if(strlen(new_user->id) >= MAX_ID){
         printf(" ----------------------------------------\n");
         printf("| ERROR: ID cannot exceed %d characters! |\n", MAX_ID-1);
-        printf("|________________________________________|\n");
+        printf("|________________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -288,7 +251,7 @@ int user_write_file(){
     else if(user_hash_table_lookup(new_user->id) != NULL){
         printf(" -------------------------------------\n");
         printf("| ERROR: This user ID already exists! |\n");
-        printf("|_____________________________________|\n");
+        printf("|_____________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -296,11 +259,11 @@ int user_write_file(){
     printf("------------------------------------------\n");
 
     printf("Enter User's Password: ");
-    scanf("%24s", new_user->password);
+    scanf("%99s", new_user->password);
     if(strlen(new_user->password) == 0){
         printf(" ----------------------------------\n");
         printf("| ERROR: Password cannot be empty! |\n");
-        printf("|__________________________________|\n");
+        printf("|__________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -308,7 +271,7 @@ int user_write_file(){
     else if(strlen(new_user->password) >= MAX_PASSWORD_LENGTH){
         printf(" ---------------------------------------------\n");
         printf("| ERROR: Password cannot exceed %d characters |\n", MAX_PASSWORD_LENGTH-1);
-        printf("|_____________________________________________|\n");
+        printf("|_____________________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -317,9 +280,9 @@ int user_write_file(){
 
     printf("Enter User's Balance: ");
     if(scanf("%lf", &new_user->balance) != 1){
-        printf(" -------------------------------------");
+        printf(" -------------------------------------\n");
         printf("| ERROR: Balance can only be numeric! |\n");
-        printf("|_____________________________________|");
+        printf("|_____________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -330,9 +293,9 @@ int user_write_file(){
     hash_password(new_user->password, new_user->salt, new_user->password_hash);
 
     if(!user_hash_table_insert(new_user)){
-        printf(" -----------------------------------------");
+        printf(" -----------------------------------------\n");
         printf("| Error while putting user in hash table. |\n");
-        printf("|_________________________________________|");
+        printf("|_________________________________________|\n\n");
         free(new_user);
         fclose(file);
         return 1;
@@ -387,7 +350,7 @@ int admin_write_file(){
     if(strlen(new_admin->name) == 0){
         printf(" ------------------------------\n");
         printf("| ERROR: Name cannot be empty! |\n");
-        printf("|______________________________|\n");
+        printf("|______________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -395,7 +358,7 @@ int admin_write_file(){
     else if(strlen(new_admin->name) >= MAX_NAME){
         printf(" -------------------------------------------\n");
         printf("| ERROR: Name cannot exceed %d characters! |\n", MAX_NAME-1);
-        printf("|___________________________________________|\n");
+        printf("|___________________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -408,7 +371,7 @@ int admin_write_file(){
     if(strlen(new_admin->surname) == 0){
         printf(" ---------------------------------\n");
         printf("| ERROR: Surname cannot be empty! |\n");
-        printf("|_________________________________|\n");
+        printf("|_________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -416,7 +379,7 @@ int admin_write_file(){
     else if(strlen(new_admin->surname) >= MAX_NAME){
         printf(" ----------------------------------------------\n");
         printf("| ERROR: Surname cannot exceed %d characters! |\n", MAX_NAME-1);
-        printf("|______________________________________________|\n");
+        printf("|______________________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -428,7 +391,7 @@ int admin_write_file(){
     if(strlen(new_admin->id) == 0){
         printf(" ----------------------------\n");
         printf("| ERROR: ID cannot be empty! |\n");
-        printf("|____________________________|\n");
+        printf("|____________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -436,7 +399,7 @@ int admin_write_file(){
     else if(admin_hash_table_lookup(new_admin->id) != NULL){
         printf(" -------------------------------------\n");
         printf("| ERROR: This admin ID already exists! |\n");
-        printf("|______________________________________|\n");
+        printf("|______________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -444,11 +407,11 @@ int admin_write_file(){
     printf("------------------------------------------\n");
 
     printf("Enter Admin's Password: ");
-    scanf("%24s", new_admin->password);
+    scanf("%99s", new_admin->password);
     if(strlen(new_admin->password) == 0){
         printf(" ----------------------------------\n");
         printf("| ERROR: Password cannot be empty! |\n");
-        printf("|__________________________________|\n");
+        printf("|__________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -456,7 +419,7 @@ int admin_write_file(){
     else if(strlen(new_admin->password) >= MAX_PASSWORD_LENGTH){
         printf(" ----------------------------------------------\n");
         printf("| ERROR: Password cannot exceed %d characters! |\n", MAX_PASSWORD_LENGTH-1);
-        printf("|______________________________________________|\n");
+        printf("|______________________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -465,10 +428,10 @@ int admin_write_file(){
 
     hash_password(new_admin->password, new_admin->salt, new_admin->password_hash);
 
-    if(admin_hash_table_insert(new_admin)){
+    if(!admin_hash_table_insert(new_admin)){
         printf(" -----------------------------------------\n");
         printf("| ERROR while putting user in hash table! |\n");
-        printf("|_________________________________________|");
+        printf("|_________________________________________|\n\n");
         free(new_admin);
         fclose(file);
         return 1;
@@ -555,7 +518,7 @@ int user_read_file(){
         if (!user_hash_table_insert(user)) {
             printf(" -----------------------------------------\n");
             printf("| Error while putting user in hash table! |\n");
-            printf("|_________________________________________|\n");
+            printf("|_________________________________________|\n\n");
             free(user);
             fclose(file);
             return 1;
@@ -624,7 +587,7 @@ int admin_read_file(){
         if (!admin_hash_table_insert(admin)) {
             printf(" ------------------------------------------\n");
             printf("| Error while putting admin in hash table! |\n");
-            printf("|__________________________________________|\n");
+            printf("|__________________________________________|\n\n");
             free(admin);
             fclose(file);
             return 1;
@@ -1165,7 +1128,7 @@ void welcome_menu(){
 //user menu
 void user_menu(){
     printf(" ----------------------------------------\n");
-    printf("|              Banking System            |\n");
+    printf("|                User Menu               |\n");
     printf("|----------------------------------------|\n");
     printf("| 1. Check Account Balance               |\n");
     printf("| 2. Check Personal Info                 |\n");
@@ -1177,7 +1140,7 @@ void user_menu(){
 //admin menu
 void admin_menu(){
     printf(" ----------------------------------------\n");
-    printf("|              Banking System            |\n");
+    printf("|               Admin Menu               |\n");
     printf("|----------------------------------------|\n");
     printf("| 1. Insert a User                       |\n");
     printf("| 2. Delete a User                       |\n");
@@ -1205,140 +1168,4 @@ void clean_hash(){
             admin_hash_table[i] = NULL;
         }
     }
-}
-
-int main() {
-    init_hash_table();
-    atexit(clean_hash);
-    char id[MAX_ID];
-    char password[MAX_PASSWORD_LENGTH];
-    int welcome_choice = 0;
-    int choice = 0;
-
-    welcome_menu();
-    printf("Enter your choice: ");
-    scanf("%d", &welcome_choice);
-    printf("\n");
-
-    switch (welcome_choice)
-    {
-        case 1:
-            if (user_read_file() != 0){
-                perror("Error reading files!\n");
-                return 1;
-            }
-            if (login_user(id, password) == false)
-            {
-                return 1;
-            }
-            person *current_user = user_hash_table_lookup(id);
-            while (1)
-            {
-                user_menu();
-
-                printf("\nEnter your choice: ");
-                scanf("%d", &choice);
-                printf("\n\n");
-
-                switch(choice)
-                {
-                    case 1:
-                        check_user_balance(current_user);
-                        break;
-                    case 2:
-                        user_personal_info(current_user, password);
-                        break;
-                    case 3:
-                        setting_transactions(current_user);
-                        break;
-                    case 4:
-                        read_transaction_file(current_user->id);
-                        break;
-                    case 5:
-                        printf(" --------------------------------\n");
-                        printf("| Goodbye %-20s :)|\n", current_user->name);
-                        printf("|________________________________|\n");
-                        return 0;
-                    default:
-                        printf(" ---------------------------------\n");
-                        printf("| Out of range, please try again. |\n");
-                        printf("|_________________________________|\n");
-                        break;
-                }
-            }
-            break;
-            
-            
-        case 2:
-            if (user_read_file() != 0 || admin_read_file() != 0){
-                perror("Error reading files!\n");
-                return 1;
-            }
-
-            if (login_admin(id, password) == false)
-            {
-                return 1;
-            }
-
-            administrator *current_admin = admin_hash_table_lookup(id);
-            while (1)
-            {
-                admin_menu();
-
-                printf("Enter your choice: ");
-                scanf("%d", &choice);
-                printf("\n\n");
-
-                switch(choice)
-                {
-                    case 1:
-                        user_write_file();
-                        break;
-                    case 2:
-                        delete_user();
-                        break;
-                    case 3:
-                        lookup_users();
-                        break;
-                    case 4:
-                        list_users();
-                        break;
-                    case 5:
-                        admin_write_file();
-                        break;
-                    case 6:
-                        delete_admin();
-                        break;
-                    case 7:
-                        lookup_admins();
-                        break;
-                    case 8:
-                        list_admins();
-                        break;
-                    case 9:
-                        printf(" --------------------------------\n");
-                        printf("| Goodbye %-20s :)|\n", current_admin->name);
-                        printf("|________________________________|\n");
-                        return 0;
-                    default:
-                        printf(" ---------------------------------\n");
-                        printf("| Out of range, please try again. |\n");
-                        printf("|_________________________________|\n");
-                        break;
-                }
-            }
-            break;
-            
-        case 3: 
-            printf(" ------------\n");
-            printf("| Exiting... |\n");
-            printf("|____________|\n");
-            return 0;
-
-        default: 
-            printf(" ---------------------------------\n");
-            printf("|           Out of Range          |\n");
-            printf("|_________________________________|\n");
-    }
-    return 0;
 }
