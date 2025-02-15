@@ -125,9 +125,9 @@ After compilation, run the program using:
 
 ## File Structure
 
-- `main.c`: Contains the main program logic and menu handling.
-- `banking_system.h`: Header file with structure definitions, function declarations, and constants.
-- `banking_system.c`: Contains the implementation of all functions (e.g., hash table operations, file I/O, password hashing).
+- `bankingsyst_main.c`: Contains the main program logic and menu handling.
+- `bankingsyst.h`: Header file with structure definitions, function declarations, and constants.
+- `bankingsyst_operations.c`: Contains the implementation of all functions (e.g., hash table operations, file I/O, password hashing).
 - `bankuser.csv`: Stores user data (name, surname, ID, hashed password, salt, balance).
 - `bankadmin.csv`: Stores admin data (name, surname, ID, hashed password, salt).
 - `transactions/`: Directory containing transaction history files for each user (e.g., `user123.csv`).
